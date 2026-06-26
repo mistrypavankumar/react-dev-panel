@@ -1,33 +1,35 @@
+'use client';
+
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import { alpha } from '@mui/material/styles';
+import { LuCopy, LuFileCode, LuClipboardCopy } from 'react-icons/lu';
+
 import type { Selected } from './store';
-import { cx } from '../../core/styles';
-import { IconCopy, IconFileCode } from '../../core/icons';
 
 function Chips({ names, onSelect }: { names: string[]; onSelect: (n: string) => void }) {
   return (
-    <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+    <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
       {names.map((n) => (
-        <button
-          key={n}
-          type="button"
-          className="rdp-chip rdp-mono"
-          style={{ border: '1px solid var(--rdp-border)', background: 'transparent', color: 'var(--rdp-text)', cursor: 'pointer' }}
-          onClick={() => onSelect(n)}
-        >
-          {n}
-        </button>
+        <Chip key={n} label={n} size="small" variant="outlined" onClick={() => onSelect(n)} sx={{ height: 18, fontSize: '0.62rem', fontFamily: 'monospace' }} />
       ))}
-    </span>
+    </Stack>
   );
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', gap: 8, marginTop: 5 }}>
-      <span style={{ minWidth: 52, color: 'var(--rdp-text-faint)', fontWeight: 600, flexShrink: 0, fontSize: 11 }}>
+    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+      <Typography variant="caption" sx={{ minWidth: 56, color: 'text.disabled', fontWeight: 600, flexShrink: 0 }}>
         {label}
-      </span>
-      <span style={{ minWidth: 0, flex: 1 }}>{children}</span>
-    </div>
+      </Typography>
+      <Box sx={{ minWidth: 0, flex: 1 }}>{children}</Box>
+    </Stack>
   );
 }
 
@@ -46,44 +48,37 @@ export function NodeDetails({
 }) {
   if (!selected) {
     return (
-      <div style={{ color: 'var(--rdp-text-faint)', padding: '6px 2px' }}>
+      <Typography variant="body2" sx={{ color: 'text.disabled', px: 0.5, py: 1 }}>
         Nothing selected. Enable inspect mode and click a component, or pick one from the tree.
-      </div>
+      </Typography>
     );
   }
   return (
-    <div
-      style={{
-        padding: 10,
-        borderRadius: 9,
-        border: '1px solid var(--rdp-border)',
-        background: 'var(--rdp-bg-soft)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="rdp-chip" style={{ background: 'rgba(105,80,232,0.22)', color: 'var(--rdp-accent)' }}>
-          {selected.componentName}
-        </span>
+    <Box sx={(t) => ({ p: 1.25, borderRadius: 1.5, border: '1px solid', borderColor: 'divider', bgcolor: alpha(t.palette.grey[500], 0.06) })}>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Chip label={selected.componentName} size="small" color="primary" variant="soft" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }} />
         {selected.domTag && (
-          <span className="rdp-mono" style={{ color: 'var(--rdp-text-faint)', fontSize: 11 }}>{`<${selected.domTag}>`}</span>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{`<${selected.domTag}>`}</Typography>
         )}
-      </div>
+      </Stack>
 
       {selected.filePath ? (
-        <div className="rdp-mono" style={{ marginTop: 6, fontSize: 11.5, color: 'var(--rdp-text-dim)', wordBreak: 'break-all' }}>
+        <Typography variant="caption" sx={{ display: 'block', mt: 0.75, fontFamily: 'monospace', fontSize: '0.68rem', wordBreak: 'break-all', color: 'text.secondary' }}>
           {selected.filePath}
           {selected.line ? `:${selected.line}` : ''}
           {selected.line && selected.column ? `:${selected.column}` : ''}
-        </div>
+        </Typography>
       ) : (
-        <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--rdp-warning)' }}>
+        <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'warning.main' }}>
           No source path — run the graph generator (npx dev-panel-graph) or mount an adapter.
-        </div>
+        </Typography>
       )}
 
       {selected.route && (
         <Row label="Route">
-          <span className="rdp-mono" style={{ fontSize: 12 }}>{selected.route}</span>
+          <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+            {selected.route}
+          </Typography>
         </Row>
       )}
       {selected.parent && (
@@ -103,33 +98,36 @@ export function NodeDetails({
       )}
       {selected.props && selected.props.length > 0 && (
         <Row label="Props">
-          <span className="rdp-mono" style={{ fontSize: 11, color: 'var(--rdp-text-dim)' }}>
+          <Box sx={{ fontFamily: 'monospace', fontSize: '0.66rem', color: 'text.secondary' }}>
             {selected.props.map((p) => (
-              <span key={p.name} style={{ marginRight: 8, display: 'inline-block' }}>
-                <span style={{ color: 'var(--rdp-accent)' }}>{p.name}</span>={p.value}
-              </span>
+              <Box key={p.name} component="span" sx={{ mr: 1, display: 'inline-block' }}>
+                <Box component="span" sx={{ color: 'primary.main' }}>
+                  {p.name}
+                </Box>
+                ={p.value}
+              </Box>
             ))}
-          </span>
+          </Box>
         </Row>
       )}
 
-      <button type="button" className={cx('rdp-btn', 'rdp-btn-primary')} style={{ marginTop: 12 }} onClick={onOpen}>
-        <IconFileCode size={14} /> Open in editor
-      </button>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button type="button" className="rdp-iconbtn" onClick={onCopyInfo} title="Copy component info">
-          <IconCopy size={15} />
-        </button>
-        <button
-          type="button"
-          className="rdp-iconbtn"
-          onClick={onCopyPath}
-          disabled={!selected.filePath && !selected.absFilePath}
-          title="Copy file path"
-        >
-          <IconFileCode size={15} />
-        </button>
-      </div>
-    </div>
+      <Button fullWidth variant="contained" startIcon={<LuFileCode size={14} />} onClick={onOpen} sx={{ textTransform: 'none', fontSize: '0.72rem', py: 0.4, mt: 1.25 }}>
+        Open in editor
+      </Button>
+      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+        <Tooltip title="Copy component info" placement="top">
+          <IconButton size="small" onClick={onCopyInfo} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <LuClipboardCopy size={15} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Copy file path" placement="top">
+          <span>
+            <IconButton size="small" onClick={onCopyPath} disabled={!selected.filePath && !selected.absFilePath} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <LuCopy size={15} />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Stack>
+    </Box>
   );
 }

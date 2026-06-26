@@ -13,6 +13,15 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   sourcemap: true,
-  // React, the optional TS compiler, and Node-only deps stay external.
-  external: ['react', 'react-dom', 'typescript', 'launch-editor'],
+  // React, MUI/Emotion, react-icons, the optional TS compiler, and Node-only deps stay external.
+  external: [
+    'react',
+    'react-dom',
+    '@mui/material',
+    '@emotion/react',
+    '@emotion/styled',
+    'react-icons',
+    'typescript',
+    'launch-editor',
+  ],
 });

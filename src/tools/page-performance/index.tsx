@@ -1,9 +1,16 @@
+'use client';
+
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import { useSyncExternalStore } from 'react';
+import { LuX, LuGauge } from 'react-icons/lu';
 import { onLCP, onCLS, onINP, onFCP, onTTFB, type Metric } from 'web-vitals';
 
 import type { ToolDefinition, ToolPanelProps } from '../../core/types';
 import { registerTool } from '../../core/registry';
-import { IconGauge, IconX } from '../../core/icons';
 
 type Rating = 'good' | 'needs-improvement' | 'poor';
 interface MetricSnapshot {
@@ -26,20 +33,13 @@ const listeners = new Set<() => void>();
 function emit() {
   listeners.forEach((l) => l());
 }
-
 function record(m: Metric) {
   metrics = {
     ...metrics,
-    [m.name]: {
-      name: m.name,
-      value: m.value,
-      rating: m.rating as Rating,
-      unit: m.name === 'CLS' ? '' : 'ms',
-    },
+    [m.name]: { name: m.name, value: m.value, rating: m.rating as Rating, unit: m.name === 'CLS' ? '' : 'ms' },
   };
   emit();
 }
-
 let installed = false;
 function installPerf(): void {
   if (installed || typeof window === 'undefined') return;
@@ -50,12 +50,11 @@ function installPerf(): void {
   onFCP(record);
   onTTFB(record);
 }
-
 function subscribe(l: () => void): () => void {
   listeners.add(l);
   return () => listeners.delete(l);
 }
-function snapshot(): Record<string, MetricSnapshot> {
+function snapshot() {
   return metrics;
 }
 const EMPTY: Record<string, MetricSnapshot> = {};
@@ -63,10 +62,10 @@ function serverSnapshot() {
   return EMPTY;
 }
 
-const RATING_COLOR: Record<Rating, string> = {
-  good: 'var(--rdp-success)',
-  'needs-improvement': 'var(--rdp-warning)',
-  poor: 'var(--rdp-error)',
+const RATING_COLOR: Record<Rating, 'success' | 'warning' | 'error'> = {
+  good: 'success',
+  'needs-improvement': 'warning',
+  poor: 'error',
 };
 
 function PagePerformancePanel({ onClose }: ToolPanelProps) {
@@ -74,47 +73,72 @@ function PagePerformancePanel({ onClose }: ToolPanelProps) {
   const order = ['LCP', 'INP', 'CLS', 'FCP', 'TTFB'];
 
   return (
-    <div className="rdp-surface rdp-panel" style={{ bottom: 88, right: 20 }}>
-      <div className="rdp-header">
-        <IconGauge size={16} />
-        <span className="rdp-title" style={{ flex: 1 }}>
-          Page Performance
-        </span>
-        <button type="button" className="rdp-iconbtn-bare" onClick={onClose} aria-label="Close">
-          <IconX size={16} />
-        </button>
-      </div>
-      <div className="rdp-body">
+    <Box
+      data-rdp-ignore=""
+      sx={{
+        position: 'fixed',
+        bottom: 96,
+        right: 24,
+        zIndex: (t) => t.zIndex.modal + 1,
+        width: 'min(440px, calc(100vw - 32px))',
+        maxHeight: 'min(70vh, 640px)',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2,
+        overflow: 'hidden',
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        boxShadow: 12,
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <LuGauge size={16} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            Page Performance
+          </Typography>
+        </Stack>
+        <IconButton size="small" onClick={onClose}>
+          <LuX size={16} />
+        </IconButton>
+      </Stack>
+
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
         {order.every((k) => !data[k]) && (
-          <div style={{ color: 'var(--rdp-text-faint)' }}>
+          <Typography variant="body2" sx={{ color: 'text.disabled' }}>
             Collecting Web Vitals… interact with the page (INP needs an interaction).
-          </div>
+          </Typography>
         )}
         {order.map((key) => {
           const m = data[key];
           if (!m) return null;
           return (
-            <div key={key} style={{ padding: '8px 0', borderBottom: '1px solid var(--rdp-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="rdp-chip" style={{ background: RATING_COLOR[m.rating], color: '#06210f' }}>
-                  {m.name}
-                </span>
-                <span className="rdp-mono" style={{ fontWeight: 700 }}>
+            <Box key={key} sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Chip
+                  label={m.name}
+                  size="small"
+                  color={RATING_COLOR[m.rating]}
+                  variant="soft"
+                  sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }}
+                />
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
                   {m.unit === 'ms' ? Math.round(m.value) : m.value.toFixed(3)}
                   {m.unit}
-                </span>
-                <span style={{ color: RATING_COLOR[m.rating], fontSize: 11, marginLeft: 'auto' }}>
+                </Typography>
+                <Typography variant="caption" sx={{ color: `${RATING_COLOR[m.rating]}.main`, ml: 'auto' }}>
                   {m.rating}
-                </span>
-              </div>
-              <div className="rdp-sub" style={{ marginTop: 2 }}>
+                </Typography>
+              </Stack>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.25 }}>
                 {HINTS[key]}
-              </div>
-            </div>
+              </Typography>
+            </Box>
           );
         })}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
@@ -123,7 +147,7 @@ export const pagePerformanceTool: ToolDefinition = {
   title: 'Page Performance',
   subtitle: 'Web Vitals & fix suggestions',
   color: 'warning',
-  icon: <IconGauge size={19} />,
+  icon: <LuGauge size={19} />,
   Panel: PagePerformancePanel,
   init: installPerf,
 };

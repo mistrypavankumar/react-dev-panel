@@ -1,4 +1,8 @@
-import { IconX, IconSearch } from '../../core/icons';
+'use client';
+
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import { LuSearch } from 'react-icons/lu';
 
 export function GraphSearch({
   value,
@@ -10,16 +14,21 @@ export function GraphSearch({
   placeholder?: string;
 }) {
   return (
-    <div className="rdp-input">
-      <span style={{ color: 'var(--rdp-text-faint)', display: 'grid', placeItems: 'center' }}>
-        <IconSearch size={15} />
-      </span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label="Search components" />
-      {value && (
-        <button type="button" className="rdp-iconbtn-bare" onClick={() => onChange('')} aria-label="Clear">
-          <IconX size={14} />
-        </button>
-      )}
-    </div>
+    <TextField
+      size="small"
+      fullWidth
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <LuSearch size={15} />
+            </InputAdornment>
+          ),
+        },
+      }}
+    />
   );
 }

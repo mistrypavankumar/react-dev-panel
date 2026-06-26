@@ -1,22 +1,33 @@
+'use client';
+
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import Divider from '@mui/material/Divider';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import ToggleButton from '@mui/material/ToggleButton';
+import { alpha, useTheme } from '@mui/material/styles';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useMemo, useCallback, useSyncExternalStore } from 'react';
+import { LuX, LuFile, LuLayers, LuWorkflow, LuMousePointerClick } from 'react-icons/lu';
 
 import type { ToolPanelProps } from '../../core/types';
 import type { ComponentGraphNode } from '../../core/graph-types';
-import { cx } from '../../core/styles';
 import { useDevPanelConfig } from '../../core/config';
 import { GraphSearch } from './Search';
 import { NodeDetails } from './NodeDetails';
 import { ComponentGraphTree } from './Tree';
 import { ComponentGraphPageList } from './PageList';
 import type { Selected, GraphMode } from './store';
-import { IconX, IconGraph, IconLayers, IconPointer, IconFileCode } from '../../core/icons';
 import { selectFromNode, formatForCopy } from './graph-utils';
 import {
   setMode,
   loadGraph,
   setSearch,
-  setSelected,
   showToast,
+  setSelected,
   toggleExpanded,
   getGraphState,
   subscribeGraph,
@@ -25,10 +36,10 @@ import {
 } from './store';
 
 const TABS: Array<{ value: GraphMode; label: string; icon: React.ReactNode }> = [
-  { value: 'hover', label: 'Hover', icon: <IconPointer size={14} /> },
-  { value: 'graph', label: 'Graph', icon: <IconGraph size={14} /> },
-  { value: 'page', label: 'Page', icon: <IconLayers size={14} /> },
-  { value: 'file', label: 'File', icon: <IconFileCode size={14} /> },
+  { value: 'hover', label: 'Hover', icon: <LuMousePointerClick size={14} /> },
+  { value: 'graph', label: 'Graph', icon: <LuWorkflow size={14} /> },
+  { value: 'page', label: 'Page', icon: <LuLayers size={14} /> },
+  { value: 'file', label: 'File', icon: <LuFile size={14} /> },
 ];
 
 async function copy(text: string): Promise<boolean> {
@@ -41,6 +52,7 @@ async function copy(text: string): Promise<boolean> {
 
 export function ComponentGraphPanel({ onClose }: ToolPanelProps) {
   const state = useSyncExternalStore(subscribeGraph, getGraphState, getGraphServerState);
+  const theme = useTheme();
   const config = useDevPanelConfig();
   const route = config.getRoute();
   const { enabled, mode, selected, graph, status, search, expanded } = state;
@@ -48,10 +60,7 @@ export function ComponentGraphPanel({ onClose }: ToolPanelProps) {
   const openLoc = useCallback(
     async (sel: Selected | null) => {
       const file = sel?.absFilePath ?? sel?.filePath;
-      if (!file) {
-        showToast({ message: 'No source path available', tone: 'error' });
-        return;
-      }
+      if (!file) return showToast({ message: 'No source path available', tone: 'error' });
       const ok = await config.openInEditor?.({ file, line: sel?.line, column: sel?.column }, config.editor);
       showToast(ok === false ? { message: 'Editor unavailable — path copied', tone: 'info' } : { message: 'Opening in your editor…', tone: 'success' });
     },
@@ -63,14 +72,11 @@ export function ComponentGraphPanel({ onClose }: ToolPanelProps) {
     void copy(formatForCopy(selected)).then((ok) => showToast({ message: ok ? 'Component info copied' : 'Copy failed', tone: ok ? 'success' : 'error' }));
   }, [selected]);
 
-  const copyPath = useCallback(
-    (sel: Selected | null) => {
-      const path = sel?.filePath ?? sel?.absFilePath;
-      if (!path) return showToast({ message: 'No path to copy', tone: 'info' });
-      void copy(`${path}${sel?.line ? `:${sel.line}` : ''}`).then((ok) => showToast({ message: ok ? 'File path copied' : 'Copy failed', tone: ok ? 'success' : 'error' }));
-    },
-    [],
-  );
+  const copyPath = useCallback((sel: Selected | null) => {
+    const path = sel?.filePath ?? sel?.absFilePath;
+    if (!path) return showToast({ message: 'No path to copy', tone: 'info' });
+    void copy(`${path}${sel?.line ? `:${sel.line}` : ''}`).then((ok) => showToast({ message: ok ? 'File path copied' : 'Copy failed', tone: ok ? 'success' : 'error' }));
+  }, []);
 
   const selectName = useCallback(
     (name: string) => {
@@ -91,130 +97,121 @@ export function ComponentGraphPanel({ onClose }: ToolPanelProps) {
   }, [status, graph]);
 
   const details = (
-    <NodeDetails
-      selected={selected}
-      onOpen={() => void openLoc(selected)}
-      onCopyInfo={copyInfo}
-      onCopyPath={() => copyPath(selected)}
-      onSelectName={selectName}
-    />
+    <NodeDetails selected={selected} onOpen={() => void openLoc(selected)} onCopyInfo={copyInfo} onCopyPath={() => copyPath(selected)} onSelectName={selectName} />
   );
 
   return (
-    <div className="rdp-surface rdp-panel" style={{ bottom: 88, right: 20 }}>
-      <div className="rdp-header">
-        <IconGraph size={16} />
-        <span className="rdp-title" style={{ flex: 1 }}>
-          Component Graph Inspector
-        </span>
-        {enabled && (
-          <span className="rdp-chip" style={{ background: 'var(--rdp-success)', color: '#06210f' }}>ON</span>
-        )}
-        <button type="button" className="rdp-iconbtn-bare" onClick={onClose} aria-label="Close">
-          <IconX size={16} />
-        </button>
-      </div>
+    <Box
+      data-rdp-ignore=""
+      sx={{
+        position: 'fixed',
+        bottom: 96,
+        right: 24,
+        zIndex: (t) => t.zIndex.modal + 1,
+        width: 'min(460px, calc(100vw - 32px))',
+        maxHeight: 'min(78vh, 720px)',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2,
+        overflow: 'hidden',
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        boxShadow: 12,
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <LuWorkflow size={16} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            Component Graph Inspector
+          </Typography>
+          {enabled && <Chip label="ON" size="small" color="success" variant="soft" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700 }} />}
+        </Stack>
+        <IconButton size="small" onClick={onClose} aria-label="Close">
+          <LuX size={16} />
+        </IconButton>
+      </Stack>
 
-      <div className="rdp-body">
-        {/* enable */}
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 9,
-            border: `1px solid ${enabled ? 'rgba(61,220,132,0.5)' : 'var(--rdp-border)'}`,
-            background: enabled ? 'rgba(61,220,132,0.08)' : 'var(--rdp-bg-elev)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
+        <Box
+          sx={{
+            p: 1.25,
+            borderRadius: 1.5,
+            border: '1px solid',
+            borderColor: enabled ? alpha(theme.palette.success.main, 0.5) : 'divider',
+            bgcolor: enabled ? alpha(theme.palette.success.main, 0.08) : 'background.default',
           }}
         >
-          <span>
-            <span className="rdp-title" style={{ display: 'block' }}>
-              Inspect mode
-            </span>
-            <span className="rdp-sub">{enabled ? 'Hover the UI, click to lock · Esc to exit' : 'Enable, then hover the UI'}</span>
-          </span>
-          <button
-            type="button"
-            className={cx('rdp-btn', enabled && 'rdp-btn-primary')}
-            style={{ width: 'auto' }}
-            onClick={() => toggleInspector(config.graphEndpoint)}
-          >
-            {enabled ? 'On' : 'Enable'}
-          </button>
-        </div>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                Inspect mode
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {enabled ? 'Hover the UI, click to lock · Esc to exit' : 'Enable, then hover the UI'}
+              </Typography>
+            </Box>
+            <Switch checked={enabled} onChange={() => toggleInspector(config.graphEndpoint)} />
+          </Stack>
+        </Box>
 
-        {/* tabs */}
-        <div className="rdp-tabs" style={{ marginTop: 12 }}>
+        <ToggleButtonGroup
+          fullWidth
+          exclusive
+          size="small"
+          value={mode}
+          onChange={(_, next: GraphMode | null) => {
+            if (!next) return;
+            setMode(next);
+            if (next === 'graph' || next === 'page') void loadGraph(config.graphEndpoint);
+          }}
+          sx={{ mt: 1.5 }}
+        >
           {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              className="rdp-tab"
-              aria-selected={mode === t.value}
-              onClick={() => {
-                setMode(t.value);
-                if (t.value === 'graph' || t.value === 'page') void loadGraph(config.graphEndpoint);
-              }}
-            >
+            <ToggleButton key={t.value} value={t.value} sx={{ textTransform: 'none', gap: 0.5, py: 0.5 }}>
               {t.icon}
               {t.label}
-            </button>
+            </ToggleButton>
           ))}
-        </div>
+        </ToggleButtonGroup>
 
-        <div style={{ marginTop: 12 }}>
-          {mode === 'hover' && (
-            <div>
-              <span className="rdp-section-label">Last locked component</span>
-              {details}
-            </div>
-          )}
+        <Divider sx={{ my: 1.5 }} />
 
-          {mode === 'graph' && (
-            <div>
-              <div className="rdp-sub" style={{ marginBottom: 6, color: status === 'ready' ? 'var(--rdp-success)' : 'var(--rdp-text-faint)' }}>
-                {statusText}
-              </div>
-              {(status === 'empty' || status === 'error') && (
-                <button type="button" className="rdp-btn rdp-btn-sm" style={{ marginBottom: 8 }} onClick={() => loadGraph(config.graphEndpoint, true)}>
-                  Retry graph load
-                </button>
-              )}
-              <GraphSearch value={search} onChange={setSearch} />
-              <div style={{ marginTop: 8 }}>
-                <ComponentGraphTree
-                  graph={graph}
-                  selected={selected}
-                  search={search}
-                  expanded={expanded}
-                  onSelect={selectNode}
-                  onToggle={toggleExpanded}
-                  onOpen={openNode}
-                  onCopy={copyNode}
-                />
-              </div>
-              {selected && !search.trim() && <div style={{ marginTop: 12 }}>{details}</div>}
-            </div>
-          )}
+        {mode === 'hover' && (
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              Last locked component
+            </Typography>
+            <Box sx={{ mt: 0.5 }}>{details}</Box>
+          </Box>
+        )}
 
-          {mode === 'page' && (
-            <div>
-              <ComponentGraphPageList
-                graph={graph}
-                route={route}
-                selectedName={selected?.componentName}
-                onSelect={selectNode}
-                onOpen={openNode}
-                onCopy={copyNode}
-              />
-              {selected && <div style={{ marginTop: 12 }}>{details}</div>}
-            </div>
-          )}
+        {mode === 'graph' && (
+          <Box>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: status === 'ready' ? 'success.main' : 'text.disabled' }}>
+              {statusText}
+            </Typography>
+            {(status === 'empty' || status === 'error') && (
+              <Chip size="small" variant="outlined" label="Retry graph load" onClick={() => loadGraph(config.graphEndpoint, true)} sx={{ mb: 1, height: 22, fontSize: '0.65rem' }} />
+            )}
+            <GraphSearch value={search} onChange={setSearch} />
+            <Box sx={{ mt: 1 }}>
+              <ComponentGraphTree graph={graph} selected={selected} search={search} expanded={expanded} onSelect={selectNode} onToggle={toggleExpanded} onOpen={openNode} onCopy={copyNode} />
+            </Box>
+            {selected && !search.trim() && <Box sx={{ mt: 1.5 }}>{details}</Box>}
+          </Box>
+        )}
 
-          {mode === 'file' && details}
-        </div>
-      </div>
-    </div>
+        {mode === 'page' && (
+          <Box>
+            <ComponentGraphPageList graph={graph} route={route} selectedName={selected?.componentName} onSelect={selectNode} onOpen={openNode} onCopy={copyNode} />
+            {selected && <Box sx={{ mt: 1.5 }}>{details}</Box>}
+          </Box>
+        )}
+
+        {mode === 'file' && details}
+      </Box>
+    </Box>
   );
 }

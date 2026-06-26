@@ -1,24 +1,58 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+'use client';
+
+import type { ReactNode, MouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useRef, useState, useEffect, useCallback } from 'react';
 
-import type { ToolDefinition } from './types';
-import { colorVar } from './styles';
-import { IconWrench, IconChevronRight } from './icons';
+import Fab from '@mui/material/Fab';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Menu from '@mui/material/Menu';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
+import { alpha } from '@mui/material/styles';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import { LuWrench, LuChevronRight } from 'react-icons/lu';
 
+import type { ToolDefinition } from './types';
+
+type TileColor = 'primary' | 'info' | 'warning' | 'success' | 'error';
+
+function ToolTile({ color, size = 38, children }: { color: TileColor; size?: number; children: ReactNode }) {
+  return (
+    <Box
+      sx={(theme) => ({
+        width: size,
+        height: size,
+        flexShrink: 0,
+        borderRadius: 1.5,
+        display: 'grid',
+        placeItems: 'center',
+        color: theme.palette[color].main,
+        bgcolor: alpha(theme.palette[color].main, 0.14),
+      })}
+    >
+      {children}
+    </Box>
+  );
+}
+
+// ── draggable corner launcher (ported from the daxwell toolbox) ───────────────
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 const STORAGE_KEY = 'react-dev-panel:corner';
-const GAP = 20;
-const FAB = 52;
+const EDGE_GAP = 24;
+const FAB_SIZE = 56;
 const DRAG_THRESHOLD = 5;
 
 function isCorner(v: string | null): v is Corner {
   return v === 'top-left' || v === 'top-right' || v === 'bottom-left' || v === 'bottom-right';
 }
-function readCorner(): Corner {
+function readStoredCorner(): Corner {
   if (typeof window === 'undefined') return 'bottom-right';
   try {
-    const s = window.localStorage.getItem(STORAGE_KEY);
-    if (isCorner(s)) return s;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (isCorner(stored)) return stored;
   } catch {
     /* ignore */
   }
@@ -27,33 +61,31 @@ function readCorner(): Corner {
 
 function useDraggableCorner() {
   const [corner, setCorner] = useState<Corner>('bottom-right');
-  const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
-  const moved = useRef(false);
-  const offset = useRef({ x: 0, y: 0 });
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const movedRef = useRef(false);
+  const offsetRef = useRef({ x: 0, y: 0 });
 
-  useEffect(() => setCorner(readCorner()), []);
+  useEffect(() => setCorner(readStoredCorner()), []);
 
-  const onPointerDown = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
-    if (e.button !== 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    offset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    moved.current = false;
-    const sx = e.clientX;
-    const sy = e.clientY;
-    const move = (ev: PointerEvent) => {
-      if (!moved.current && Math.hypot(ev.clientX - sx, ev.clientY - sy) < DRAG_THRESHOLD) return;
-      moved.current = true;
-      setDrag({ x: ev.clientX - offset.current.x, y: ev.clientY - offset.current.y });
+  const onPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    offsetRef.current = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    movedRef.current = false;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const handleMove = (ev: PointerEvent) => {
+      if (!movedRef.current && Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD) return;
+      movedRef.current = true;
+      setDragPos({ x: ev.clientX - offsetRef.current.x, y: ev.clientY - offsetRef.current.y });
     };
-    const up = (ev: PointerEvent) => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (moved.current) {
-        const cxp = ev.clientX - offset.current.x + FAB / 2;
-        const cyp = ev.clientY - offset.current.y + FAB / 2;
-        const next = `${cyp < window.innerHeight / 2 ? 'top' : 'bottom'}-${
-          cxp < window.innerWidth / 2 ? 'left' : 'right'
-        }` as Corner;
+    const handleUp = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      if (movedRef.current) {
+        const cx = ev.clientX - offsetRef.current.x + FAB_SIZE / 2;
+        const cy = ev.clientY - offsetRef.current.y + FAB_SIZE / 2;
+        const next = `${cy < window.innerHeight / 2 ? 'top' : 'bottom'}-${cx < window.innerWidth / 2 ? 'left' : 'right'}` as Corner;
         setCorner(next);
         try {
           window.localStorage.setItem(STORAGE_KEY, next);
@@ -61,137 +93,163 @@ function useDraggableCorner() {
           /* ignore */
         }
       }
-      setDrag(null);
+      setDragPos(null);
     };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
   }, []);
 
-  const onClickCapture = useCallback((e: ReactMouseEvent) => {
-    if (moved.current) {
-      e.stopPropagation();
-      e.preventDefault();
-      moved.current = false;
+  const onClickCapture = useCallback((event: MouseEvent<HTMLElement>) => {
+    if (movedRef.current) {
+      event.stopPropagation();
+      event.preventDefault();
+      movedRef.current = false;
     }
   }, []);
 
+  const dragging = dragPos !== null;
   const isTop = corner.startsWith('top');
   const isLeft = corner.endsWith('left');
-  const pos = drag
-    ? { top: drag.y, left: drag.x }
+  const positionSx = dragging
+    ? { top: dragPos.y, left: dragPos.x, right: 'auto', bottom: 'auto' }
     : {
-        top: isTop ? GAP : undefined,
-        bottom: isTop ? undefined : GAP,
-        left: isLeft ? GAP : undefined,
-        right: isLeft ? undefined : GAP,
+        top: isTop ? EDGE_GAP : 'auto',
+        bottom: isTop ? 'auto' : EDGE_GAP,
+        left: isLeft ? EDGE_GAP : 'auto',
+        right: isLeft ? 'auto' : EDGE_GAP,
       };
-  return { pos, isTop, isLeft, onPointerDown, onClickCapture };
+
+  return { positionSx, onPointerDown, onClickCapture, isTop, isLeft, dragging };
 }
 
 function ToolBadge({ tool }: { tool: ToolDefinition }) {
   const badge = tool.useBadge?.();
   if (!badge) return null;
-  const bg =
-    badge.tone === 'error'
-      ? 'var(--rdp-error)'
-      : badge.tone === 'success'
-        ? 'var(--rdp-success)'
-        : 'var(--rdp-bg-soft)';
-  const color = badge.tone === 'success' ? '#06210f' : '#fff';
+  const color = badge.tone === 'error' ? 'error' : badge.tone === 'success' ? 'success' : 'default';
   return (
-    <span className="rdp-chip" style={{ background: bg, color }}>
-      {badge.label}
-    </span>
+    <Chip
+      size="small"
+      variant="soft"
+      color={color}
+      label={badge.label}
+      sx={{ height: 18, fontWeight: 700, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+    />
   );
 }
 
-/** Floating launcher: draggable FAB that opens a menu listing the registered tools. */
-export function Launcher({
-  tools,
-  onOpenTool,
-}: {
-  tools: ToolDefinition[];
-  onOpenTool: (id: string) => void;
-}) {
-  const { pos, isTop, isLeft, onPointerDown, onClickCapture } = useDraggableCorner();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const menuPos = {
-    top: isTop ? pos.top !== undefined ? (pos.top as number) + FAB + 8 : GAP + FAB + 8 : undefined,
-    bottom: isTop ? undefined : GAP + FAB + 8,
-    left: isLeft ? GAP : undefined,
-    right: isLeft ? undefined : GAP,
-  };
+/** Floating launcher: draggable FAB opening a menu of the registered tools (MUI). */
+export function Launcher({ tools, onOpenTool }: { tools: ToolDefinition[]; onOpenTool: (id: string) => void }) {
+  const { positionSx, onPointerDown, onClickCapture, isTop, isLeft, dragging } = useDraggableCorner();
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
   return (
     <>
-      <button
-        type="button"
-        className="rdp-fab"
-        style={pos}
-        onPointerDown={onPointerDown}
-        onClickCapture={onClickCapture}
-        onClick={() => setMenuOpen((v) => !v)}
-        aria-label="Open Developer Tools"
-        aria-haspopup="menu"
+      <Box
+        data-rdp-ignore=""
+        sx={(theme) => ({ position: 'fixed', zIndex: theme.zIndex.modal + 2, ...positionSx })}
       >
-        <IconWrench size={22} />
-      </button>
+        <Tooltip title={dragging ? '' : 'Developer Tools — drag to a corner'} placement={isLeft ? 'right' : 'left'} arrow>
+          <Fab
+            onClick={(e) => setMenuAnchor(e.currentTarget)}
+            onClickCapture={onClickCapture}
+            onPointerDown={onPointerDown}
+            aria-label="Open Developer Tools"
+            aria-haspopup="menu"
+            sx={(theme) => ({
+              width: FAB_SIZE,
+              height: FAB_SIZE,
+              touchAction: 'none',
+              cursor: dragging ? 'grabbing' : 'grab',
+              color: theme.palette.primary.contrastText,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.24)}, 0 8px 24px rgba(0,0,0,0.5)`,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.dark})`,
+              },
+            })}
+          >
+            <LuWrench size={22} />
+          </Fab>
+        </Tooltip>
+      </Box>
 
-      {menuOpen && (
-        <>
-          {/* click-away */}
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 1 }}
-            onClick={() => setMenuOpen(false)}
-            aria-hidden
-          />
-          <div className="rdp-surface rdp-menu" style={menuPos} role="menu">
-            <div className="rdp-header rdp-menu-head">
-              <span className="rdp-tile" style={{ color: 'var(--rdp-accent)', background: 'rgba(105,80,232,0.16)' }}>
-                <IconWrench size={17} />
-              </span>
-              <div>
-                <div className="rdp-title">Developer Tools</div>
-                <div className="rdp-sub">Internal utilities</div>
-              </div>
-            </div>
-            <div style={{ padding: 8 }}>
-              {tools.map((tool) => (
-                <button
-                  key={tool.id}
-                  type="button"
-                  className="rdp-row"
-                  role="menuitem"
-                  onClick={() => {
-                    onOpenTool(tool.id);
-                    setMenuOpen(false);
-                  }}
-                >
-                  <span
-                    className="rdp-tile"
-                    style={{ color: colorVar(tool.color), background: 'rgba(148,163,184,0.1)' }}
-                  >
-                    {tool.icon}
-                  </span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span className="rdp-title" style={{ display: 'block' }}>
-                      {tool.title}
-                    </span>
-                    <span className="rdp-sub" style={{ display: 'block' }}>
-                      {tool.subtitle}
-                    </span>
-                  </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--rdp-text-faint)' }}>
-                    <ToolBadge tool={tool} />
-                    <IconChevronRight size={16} />
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={() => setMenuAnchor(null)}
+        sx={(theme) => ({ zIndex: theme.zIndex.modal + 2 })}
+        anchorOrigin={{ vertical: isTop ? 'bottom' : 'top', horizontal: isLeft ? 'left' : 'right' }}
+        transformOrigin={{ vertical: isTop ? 'top' : 'bottom', horizontal: isLeft ? 'left' : 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              width: 320,
+              mt: isTop ? 1.5 : 0,
+              mb: isTop ? 0 : 1.5,
+              borderRadius: 2.5,
+              overflow: 'hidden',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 16,
+            },
+          },
+          list: { sx: { py: 0 } },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.25,
+            px: 2,
+            py: 1.5,
+            background: (theme) =>
+              `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.16)}, ${alpha(theme.palette.primary.main, 0.04)})`,
+          }}
+        >
+          <ToolTile color="primary" size={34}>
+            <LuWrench size={17} />
+          </ToolTile>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+              Developer Tools
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Internal utilities
+            </Typography>
+          </Box>
+        </Box>
+        <Divider />
+        <Box sx={{ p: 1 }}>
+          {tools.map((tool, i) => (
+            <MenuItem
+              key={tool.id}
+              onClick={() => {
+                onOpenTool(tool.id);
+                setMenuAnchor(null);
+              }}
+              disableGutters
+              sx={{ alignItems: 'flex-start', gap: 1.25, px: 1.25, py: 1.25, mt: i === 0 ? 0 : 0.5, borderRadius: 1.5, whiteSpace: 'normal' }}
+            >
+              <ToolTile color={(tool.color as TileColor) ?? 'primary'}>{tool.icon}</ToolTile>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                  {tool.title}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                  {tool.subtitle}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
+                <ToolBadge tool={tool} />
+                <Box sx={{ display: 'grid', placeItems: 'center', color: 'text.disabled' }}>
+                  <LuChevronRight size={16} />
+                </Box>
+              </Stack>
+            </MenuItem>
+          ))}
+        </Box>
+      </Menu>
     </>
   );
 }

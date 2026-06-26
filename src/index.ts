@@ -20,7 +20,6 @@ registerComponentGraph();
 export { DevPanel } from './core/DevPanel';
 export { registerTool, getRegisteredTools } from './core/registry';
 export { defaultOpenInEditor, useDevPanelConfig } from './core/config';
-export { injectBaseStyles } from './core/styles';
 export {
   serverOpenInEditor,
   createServerOpenInEditor,
