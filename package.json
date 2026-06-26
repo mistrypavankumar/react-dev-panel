@@ -1,9 +1,17 @@
 {
   "name": "react-dev-panel",
   "version": "0.2.2",
-  "description": "A framework-agnostic, self-contained floating dev panel for React: Developer Logs, Page Performance, and a Component Graph Inspector (hover-to-source, component tree, open-in-editor).",
+  "description": "A floating in-app dev panel for React (MUI): Developer Logs, Page Performance, and a Component Graph Inspector (hover-to-source, component tree, open-in-editor). Vite/Next/server adapters included.",
   "license": "MIT",
   "author": "Pavan Kumar Mistry",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mistrypavankumar/react-dev-panel.git"
+  },
+  "homepage": "https://github.com/mistrypavankumar/react-dev-panel#readme",
+  "bugs": {
+    "url": "https://github.com/mistrypavankumar/react-dev-panel/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "keywords": [
