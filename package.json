@@ -1,6 +1,6 @@
 {
   "name": "react-dev-panel",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A framework-agnostic, self-contained floating dev panel for React: Developer Logs, Page Performance, and a Component Graph Inspector (hover-to-source, component tree, open-in-editor).",
   "license": "MIT",
   "author": "Pavan Kumar Mistry",
@@ -40,7 +40,8 @@
       "types": "./dist/adapters/server.d.ts",
       "import": "./dist/adapters/server.js",
       "require": "./dist/adapters/server.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsup",

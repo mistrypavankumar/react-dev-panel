@@ -8,9 +8,16 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import { alpha } from '@mui/material/styles';
-import { LuCopy, LuFileCode, LuClipboardCopy } from 'react-icons/lu';
+import { LuCopy, LuLink, LuFileCode, LuClipboardCopy } from 'react-icons/lu';
 
 import type { Selected } from './store';
+import type { EditorType } from '../../core/types';
+
+const EDITORS: Array<{ key: EditorType; label: string }> = [
+  { key: 'vscode', label: 'VS Code' },
+  { key: 'cursor', label: 'Cursor' },
+  { key: 'webstorm', label: 'WebStorm' },
+];
 
 function Chips({ names, onSelect }: { names: string[]; onSelect: (n: string) => void }) {
   return (
@@ -35,13 +42,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function NodeDetails({
   selected,
+  editor,
   onOpen,
+  onOpenEditor,
   onCopyInfo,
   onCopyPath,
   onSelectName,
 }: {
   selected: Selected | null;
+  editor: EditorType;
   onOpen: () => void;
+  onOpenEditor: (editor: EditorType) => void;
   onCopyInfo: () => void;
   onCopyPath: () => void;
   onSelectName: (name: string) => void;
@@ -114,6 +125,24 @@ export function NodeDetails({
       <Button fullWidth variant="contained" startIcon={<LuFileCode size={14} />} onClick={onOpen} sx={{ textTransform: 'none', fontSize: '0.72rem', py: 0.4, mt: 1.25 }}>
         Open in editor
       </Button>
+      {/* Override the auto-detected editor for this open. */}
+      <Stack direction="row" alignItems="center" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap', mt: 0.75 }}>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+          force:
+        </Typography>
+        {EDITORS.map((opt) => (
+          <Button
+            key={opt.key}
+            size="small"
+            variant={opt.key === editor ? 'contained' : 'text'}
+            startIcon={<LuLink size={12} />}
+            onClick={() => onOpenEditor(opt.key)}
+            sx={{ textTransform: 'none', fontSize: '0.66rem', py: 0.1, minWidth: 0 }}
+          >
+            {opt.label}
+          </Button>
+        ))}
+      </Stack>
       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
         <Tooltip title="Copy component info" placement="top">
           <IconButton size="small" onClick={onCopyInfo} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>

@@ -13,7 +13,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useMemo, useCallback, useSyncExternalStore } from 'react';
 import { LuX, LuFile, LuLayers, LuWorkflow, LuMousePointerClick } from 'react-icons/lu';
 
-import type { ToolPanelProps } from '../../core/types';
+import type { EditorType, ToolPanelProps } from '../../core/types';
 import type { ComponentGraphNode } from '../../core/graph-types';
 import { useDevPanelConfig } from '../../core/config';
 import { GraphSearch } from './Search';
@@ -58,10 +58,10 @@ export function ComponentGraphPanel({ onClose }: ToolPanelProps) {
   const { enabled, mode, selected, graph, status, search, expanded } = state;
 
   const openLoc = useCallback(
-    async (sel: Selected | null) => {
+    async (sel: Selected | null, editor?: EditorType) => {
       const file = sel?.absFilePath ?? sel?.filePath;
       if (!file) return showToast({ message: 'No source path available', tone: 'error' });
-      const ok = await config.openInEditor?.({ file, line: sel?.line, column: sel?.column }, config.editor);
+      const ok = await config.openInEditor?.({ file, line: sel?.line, column: sel?.column }, editor ?? config.editor);
       showToast(ok === false ? { message: 'Editor unavailable — path copied', tone: 'info' } : { message: 'Opening in your editor…', tone: 'success' });
     },
     [config],
@@ -97,7 +97,15 @@ export function ComponentGraphPanel({ onClose }: ToolPanelProps) {
   }, [status, graph]);
 
   const details = (
-    <NodeDetails selected={selected} onOpen={() => void openLoc(selected)} onCopyInfo={copyInfo} onCopyPath={() => copyPath(selected)} onSelectName={selectName} />
+    <NodeDetails
+      selected={selected}
+      editor={config.editor}
+      onOpen={() => void openLoc(selected)}
+      onOpenEditor={(editor) => void openLoc(selected, editor)}
+      onCopyInfo={copyInfo}
+      onCopyPath={() => copyPath(selected)}
+      onSelectName={selectName}
+    />
   );
 
   return (
