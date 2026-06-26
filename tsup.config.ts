@@ -1,14 +1,18 @@
 import { defineConfig } from 'tsup';
 
-// Entry points grow as adapters/CLI land. Today: the core + bundled tools.
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
+    'adapters/next': 'src/adapters/next.ts',
+    'adapters/vite': 'src/adapters/vite.ts',
+    'adapters/server': 'src/adapters/server.ts',
+    'cli/index': 'src/cli/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
   clean: true,
   treeshake: true,
   sourcemap: true,
-  external: ['react', 'react-dom', 'typescript'],
+  // React, the optional TS compiler, and Node-only deps stay external.
+  external: ['react', 'react-dom', 'typescript', 'launch-editor'],
 });

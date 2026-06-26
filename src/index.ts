@@ -10,15 +10,25 @@
 
 import { registerDevLogs } from './tools/dev-logs/index';
 import { registerPagePerformance } from './tools/page-performance/index';
+import { registerComponentGraph } from './tools/component-graph/index';
 
 // Register the bundled tools once, at import time.
 registerDevLogs();
 registerPagePerformance();
+registerComponentGraph();
 
 export { DevPanel } from './core/DevPanel';
 export { registerTool, getRegisteredTools } from './core/registry';
 export { defaultOpenInEditor, useDevPanelConfig } from './core/config';
 export { injectBaseStyles } from './core/styles';
+export {
+  serverOpenInEditor,
+  createServerOpenInEditor,
+  DEFAULT_GRAPH_ENDPOINT,
+  DEFAULT_OPEN_ENDPOINT,
+} from './core/server-open';
+
+export type { ComponentGraph, ComponentGraphNode, ComponentGraphEdge } from './core/graph-types';
 
 export type {
   DevPanelConfig,

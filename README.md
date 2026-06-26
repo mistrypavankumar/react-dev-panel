@@ -5,7 +5,7 @@ Redux, no design-system coupling. One component, gated to internal/dev users, gi
 
 - **Developer Logs** — live console + network capture
 - **Page Performance** — Core Web Vitals with fix hints
-- **Component Graph Inspector** — hover-to-source, component tree, "what's on this page", open-in-editor *(in progress — see Roadmap)*
+- **Component Graph Inspector** — hover-to-source, component tree, "what's on this page", open-in-editor
 
 Styles are injected once under a `.rdp-root` scope, so the panel can't clash with — or be
 clashed by — your app's theme. The only runtime requirement is React 18+.
@@ -66,17 +66,65 @@ registerTool({
 });
 ```
 
+## Component Graph Inspector
+
+Reliable component inspection that works in normal dev (Turbopack/Vite — no special build):
+
+1. **Generate the graph** (components, files, parent/child/import/route edges):
+   ```bash
+   npx dev-panel-graph --scan src
+   # → .dev-panel/component-graph.json
+   ```
+2. **Serve it + enable open-in-editor** with an adapter (below).
+3. Open the panel → **Inspect mode** → hover (highlight + tooltip), click to lock, ⌘/Ctrl+click
+   to open. Tabs: **Graph** (search + relationship tree), **Page** (what's mounted on this
+   route), **File** (source + open).
+
+Resolution climbs the React fiber tree to the nearest component that's in the graph, so hovering
+a leaf still lands on your real app component. Open-in-editor uses the editor **running the
+project** (`launch-editor`) — VS Code, Cursor, WebStorm, Zed, … — via the adapter endpoint.
+
+### Adapters
+
+**Vite**
+```ts
+import { devPanel } from 'react-dev-panel/vite';
+export default defineConfig({ plugins: [react(), devPanel({ scan: ['src'] })] });
+```
+
+**Next.js (App Router)** — gate these yourself; dev/internal only.
+```ts
+// app/dev-panel/graph/route.ts
+export const { GET } = createGraphRoute({ enabled: () => process.env.NODE_ENV !== 'production' });
+// app/dev-panel/open-file/route.ts
+export const { POST } = createOpenFileRoute({ enabled: () => process.env.NODE_ENV !== 'production' });
+```
+
+**Any Node server (CRA/Express/custom)**
+```ts
+import { createDevPanelMiddleware } from 'react-dev-panel/server';
+app.use(createDevPanelMiddleware());
+```
+
+Then wire the client:
+```tsx
+import { DevPanel, serverOpenInEditor, DEFAULT_GRAPH_ENDPOINT } from 'react-dev-panel';
+<DevPanel enabled={isDev} graphEndpoint={DEFAULT_GRAPH_ENDPOINT} openInEditor={serverOpenInEditor} />
+```
+
+Without an adapter the inspector still works at runtime (component names, tree from the graph if
+served, page scan); open-in-editor falls back to `editor://` protocol URLs then copy.
+
 ## Roadmap
 
-This is an active extraction from an internal monorepo. Shipping incrementally:
-
 - [x] Framework-agnostic core (provider, launcher, self-contained styles, tool registry)
-- [x] Developer Logs
-- [x] Page Performance
-- [ ] **Component Graph Inspector** — runtime overlay (hover/lock), component tree, "on this page", open-in-editor
-- [ ] **CLI** `dev-panel-graph` — static component-graph generator (TypeScript Compiler API)
-- [ ] **Adapters** — `react-dev-panel/next` (route handlers), `/vite` (plugin), `/server` (connect middleware) to serve the graph + open files in the running editor
+- [x] Developer Logs · Page Performance · Component Graph Inspector
+- [x] CLI `dev-panel-graph` (TypeScript Compiler API)
+- [x] Adapters: `/next`, `/vite`, `/server`
+- [ ] Demo apps + browser-tested screenshots
+- [ ] Optional Babel/SWC transform for exact element line:col
 
 ## License
 
 MIT
+
