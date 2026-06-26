@@ -1,0 +1,76 @@
+{
+  "name": "react-dev-panel",
+  "version": "0.1.0",
+  "description": "A framework-agnostic, self-contained floating dev panel for React: Developer Logs, Page Performance, and a Component Graph Inspector (hover-to-source, component tree, open-in-editor).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "keywords": [
+    "react",
+    "devtools",
+    "inspector",
+    "component-graph",
+    "web-vitals",
+    "developer-logs",
+    "vite-plugin",
+    "nextjs"
+  ],
+  "files": ["dist"],
+  "bin": {
+    "dev-panel-graph": "dist/cli/index.cjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./next": {
+      "types": "./dist/adapters/next.d.ts",
+      "import": "./dist/adapters/next.js",
+      "require": "./dist/adapters/next.cjs"
+    },
+    "./vite": {
+      "types": "./dist/adapters/vite.d.ts",
+      "import": "./dist/adapters/vite.js",
+      "require": "./dist/adapters/vite.cjs"
+    },
+    "./server": {
+      "types": "./dist/adapters/server.d.ts",
+      "import": "./dist/adapters/server.js",
+      "require": "./dist/adapters/server.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "launch-editor": "^2.9.1",
+    "web-vitals": "^4.2.4"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "typescript": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "typescript": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
